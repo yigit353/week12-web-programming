@@ -1,6 +1,8 @@
 # ByteBooks — Security Posture (Frontend + Backend)
 
-> Status: Session 1 complete (frontend). Session 2 complete (backend code + audits + checklist). Three Railway/GitHub dashboard items remain — see **Pending operator work** at the bottom.
+> Status: Session 1 + 2 complete. **13 / 14** rubric items ticked. Only the `SECRET_KEY` seal + rotate drill remains — see **Pending operator work** at the bottom.
+>
+> See also: [`/SECURITY.md`](../SECURITY.md) — public security policy / vulnerability disclosure (this file is the operational posture; that one is the report-it-here policy).
 
 ## Production URLs
 
@@ -104,8 +106,9 @@ Wired in `bytebooks-api/main.py:149` (Limiter setup) and on the two protected ro
 ### Dependency Hygiene
 
 - **`pip-audit -r requirements.txt`** — 0 known vulnerabilities (run 2026-05-03).
-- **`npm audit --omit=dev`** — 0 vulnerabilities at every severity (run 2026-05-03; `--production` is deprecated, replaced by `--omit=dev`).
-- **Dependabot**: must be enabled in *both* GitHub repos via Settings → Code security and analysis. Alerts + Security updates + (optional) Version updates. See *Pending operator work*.
+- **`npm audit --omit=dev`** — 0 vulnerabilities at every severity (re-run 2026-05-04 after Dependabot bumped vite 7.3.1 → 7.3.2 and postcss 8.5.8 → 8.5.13). `--production` is deprecated, replaced by `--omit=dev`.
+- **Dependabot**: alerts + security updates + version updates **all enabled** on `github.com/yigit353/week12-web-programming`. First two security PRs (#1 postcss, #2 vite) merged 2026-05-04. Auto-bump cadence is whatever GitHub's default is (alerts surface within hours of CVE publication, security PRs open shortly after). Single-repo monorepo, so no second repo to configure.
+- **Other GitHub security features enabled** (visible in the repo's Security tab): Private vulnerability reporting (researchers can file privately), Security policy (the root `/SECURITY.md` is what GitHub picks up), Secret scanning alerts. Code scanning (CodeQL) is *not* enabled — would be a useful Session 3 add-on.
 
 ### CORS
 
@@ -152,29 +155,30 @@ The 14 items below are the rubric for the final-project security score. Tick wha
 - [x] One Vercel WAF rate-limit rule active
 - [x] Bot Protection managed ruleset enabled (Vercel retired "BotID Basic" — current product is Bot Protection in Log mode + AI Bots in Deny mode)
 - [x] Edge Middleware injecting `x-request-id` on every response
-- [ ] Postgres public TCP proxy disabled; FastAPI uses `${{ Postgres.DATABASE_URL }}` (which is the private URL in this template — `DATABASE_PUBLIC_URL` is the exposed one)
+- [x] Postgres public TCP proxy disabled; FastAPI uses `${{ Postgres.DATABASE_URL }}` (which is the private URL in this template — `DATABASE_PUBLIC_URL` is the exposed one). Verified 2026-05-03 — `curl /books` returns rows, confirming FastAPI is talking to Postgres over `postgres.railway.internal`.
 - [ ] `SECRET_KEY` sealed in Railway and rotated within the last 30 days
 - [x] slowapi rate limits on `/auth/login` (5/min) and one expensive route (`/books/search-external`, 30/min), keyed on JWT
 - [x] No `pip-audit` high/critical findings (0 of any severity, 2026-05-03)
-- [x] No `npm audit --omit=dev` high/critical findings (0 of any severity, 2026-05-03)
-- [ ] Dependabot security updates enabled in both repos
+- [x] No `npm audit --omit=dev` high/critical findings (0 of any severity, re-run 2026-05-04 after Dependabot bumps)
+- [x] Dependabot security updates enabled (single-repo monorepo; PRs #1 + #2 merged 2026-05-04)
 - [x] CORS allows the production frontend URL only — no `*` wildcards
 - [x] `SECURITY.md` documents rotation order and known platform caveats
 
-**Score: 11 / 14.** The three open items are operator dashboard tasks (no code change needed). See below.
+**Score: 13 / 14.** One open item remains (`SECRET_KEY` seal + rotate) — operator dashboard task. See below.
 
 ## Pending operator work (Railway + GitHub dashboards)
 
-These cannot be done in code — they live in dashboards. Do them in order; each takes < 5 minutes.
+One item remains. The runbook entries for already-completed items are kept as reference in case they need to be redone (e.g., after a Railway/GitHub project rebuild).
 
-### 1. Postgres private networking
+### 1. Postgres private networking — ✅ done 2026-05-03
 
 - Railway dashboard → **Postgres** service → Settings → Networking → **disable public TCP proxy**
 - Railway dashboard → **api** service → Variables → set `DATABASE_URL = ${{ Postgres.DATABASE_URL }}` (exact double-curly syntax; service name is case-sensitive). In Railway's current Postgres template `DATABASE_URL` *is* the private URL (resolves to `postgres.railway.internal`); `DATABASE_PUBLIC_URL` is the public TCP proxy. The pre-2025 guide name `DATABASE_PRIVATE_URL` does not exist in this template and resolves to an empty string — SQLAlchemy then fails with *"Could not parse SQLAlchemy URL from given URL string"*.
 - Save → wait for redeploy → Logs tab should show "uvicorn running" with no DNS / connection errors
 - From your laptop: `nc -zv <old-public-pg-host> 5432` should fail with *Name or service not known*
+- Verified: `curl /books` returns rows over the private connection.
 
-### 2. Seal + rotate `SECRET_KEY`
+### 2. Seal + rotate `SECRET_KEY` — ⏳ pending
 
 - Railway → api service → Variables → `SECRET_KEY` → 3-dot → **Seal** (no un-seal exists)
 - Verify: `railway login && railway link && railway variables` — output should NOT show the value
@@ -182,12 +186,13 @@ These cannot be done in code — they live in dashboards. Do them in order; each
 - Verify rotation invalidated old JWTs: from a browser tab with an old token, hit any authenticated endpoint → must return 401
 - After rotation, update `Last rotated:` in this doc
 
-### 3. Enable Dependabot in both GitHub repos
+### 3. Dependabot — ✅ done 2026-05-04
 
 - `github.com/yigit353/week12-web-programming` → Settings → Code security and analysis
 - Turn on **Dependabot alerts** and **Dependabot security updates**
 - (Optional) **Dependabot version updates** — adds a `.github/dependabot.yml` PR
 - Visit the **Security** tab → confirm "Dependabot is monitoring" with a green check
+- First two security PRs (postcss 8.5.8 → 8.5.13, vite 7.3.1 → 7.3.2) merged 2026-05-04 with `npm audit` re-run clean.
 - (No second repo: this monorepo holds both `bytebooks-frontend/` and `bytebooks-api/`. If they're ever split, repeat there.)
 
 ### 4. (Optional) Wire Sentry
@@ -255,3 +260,4 @@ done | sort | uniq -c
 - **Phase A**: shipped 6 headers with CSP in Report-Only mode, added Edge Middleware (`x-request-id` + `/admin/*` gate), drafted this document. Created new Vercel project `bytebooks-frontend-week12` and new Railway project for `bytebooks-api` linked to `github.com/yigit353/week12-web-programming`. Dashboard work completed during the deploy wait: Vercel Authentication ON, Bypass token saved, WAF rate-limit rule published, Bot Protection set to Log, AI Bots set to On (Deny), Attack Challenge Mode confirmed off, Vercel Root Directory set to `bytebooks-frontend`, Railway `FRONTEND_URL` env var set without trailing slash.
 - **Phase B**: promoted CSP from Report-Only to enforcing after Console showed zero violations under a full app exercise (`/`, `/books`, `/authors`, `/login`, `/books/new` post-login). Rewrote Bot Management section with current Vercel terminology. Added Gotchas section capturing the four lessons from this session.
 - **Phase C (Session 2, 2026-05-03)**: hardened the Railway origin. Wired slowapi with a JWT-or-IP key function (`bytebooks-api/main.py:149`) — `/auth/login` 5/min, `/books/search-external` 30/min, 429 returns `Retry-After: 60`. Smoke-tested locally: 5×401 then 429. Added `slowapi>=0.1.9` to `requirements.txt`. Used `python-jose` (already a dep) instead of pulling in `pyjwt` for the unverified-claims read. Audits: `pip-audit` 0 vulns, `npm audit --omit=dev` 0 vulns. Added the 14-item production-readiness checklist (rubric for the final-project security score) — 11/14 ticked; the three open items are operator dashboard tasks captured under *Pending operator work*.
+- **Phase D (Session 2 sign-off, 2026-05-04)**: closed two of the three operator items. Postgres private networking verified end-to-end (`/books` returns rows over `postgres.railway.internal`). Dependabot alerts + security updates + version updates all enabled on the repo; first two PRs (postcss 8.5.8 → 8.5.13, vite 7.3.1 → 7.3.2) merged with `npm audit` re-run clean. Also enabled GitHub Private Vulnerability Reporting and published a root `/SECURITY.md` (security policy / disclosure channel — distinct from this file's posture documentation). Added a root `README.md` describing the monorepo layout, deployment URLs, local dev, and links to GUIDE/SECURITY/prompts. Checklist now 13/14; only `SECRET_KEY` seal+rotate remains.
