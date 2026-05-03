@@ -71,7 +71,7 @@ Vercel retired the older "BotID Basic" product. Current offering is two managed 
 ### Database
 
 - Postgres public TCP proxy: **must be disabled** in Railway dashboard (Postgres service → Settings → Networking). See *Pending operator work* below.
-- FastAPI reads `DATABASE_URL` from env (`bytebooks-api/database.py:31`). Production value should be the Railway-variable reference `${{ Postgres.DATABASE_PRIVATE_URL }}`, which resolves to `postgres.railway.internal` over the project's Wireguard private network.
+- FastAPI reads `DATABASE_URL` from env (`bytebooks-api/database.py:31`). Production value is the Railway-variable reference `${{ Postgres.DATABASE_URL }}`, which in the current Railway Postgres template resolves to `postgres.railway.internal` over the project's Wireguard private network. (Older guides reference `DATABASE_PRIVATE_URL` — that variable does not exist in this template; the private one is just `DATABASE_URL`. The public TCP proxy URL is exposed separately as `DATABASE_PUBLIC_URL`.)
 - Code is hostname-based (no hardcoded IPs), so dual-stack and the legacy IPv6-only path both work without changes.
 
 ### Secrets
@@ -152,7 +152,7 @@ The 14 items below are the rubric for the final-project security score. Tick wha
 - [x] One Vercel WAF rate-limit rule active
 - [x] Bot Protection managed ruleset enabled (Vercel retired "BotID Basic" — current product is Bot Protection in Log mode + AI Bots in Deny mode)
 - [x] Edge Middleware injecting `x-request-id` on every response
-- [ ] Postgres public TCP proxy disabled; FastAPI uses `${{ Postgres.DATABASE_PRIVATE_URL }}`
+- [ ] Postgres public TCP proxy disabled; FastAPI uses `${{ Postgres.DATABASE_URL }}` (which is the private URL in this template — `DATABASE_PUBLIC_URL` is the exposed one)
 - [ ] `SECRET_KEY` sealed in Railway and rotated within the last 30 days
 - [x] slowapi rate limits on `/auth/login` (5/min) and one expensive route (`/books/search-external`, 30/min), keyed on JWT
 - [x] No `pip-audit` high/critical findings (0 of any severity, 2026-05-03)
@@ -170,7 +170,7 @@ These cannot be done in code — they live in dashboards. Do them in order; each
 ### 1. Postgres private networking
 
 - Railway dashboard → **Postgres** service → Settings → Networking → **disable public TCP proxy**
-- Railway dashboard → **api** service → Variables → set `DATABASE_URL = ${{ Postgres.DATABASE_PRIVATE_URL }}` (exact double-curly syntax; service name is case-sensitive)
+- Railway dashboard → **api** service → Variables → set `DATABASE_URL = ${{ Postgres.DATABASE_URL }}` (exact double-curly syntax; service name is case-sensitive). In Railway's current Postgres template `DATABASE_URL` *is* the private URL (resolves to `postgres.railway.internal`); `DATABASE_PUBLIC_URL` is the public TCP proxy. The pre-2025 guide name `DATABASE_PRIVATE_URL` does not exist in this template and resolves to an empty string — SQLAlchemy then fails with *"Could not parse SQLAlchemy URL from given URL string"*.
 - Save → wait for redeploy → Logs tab should show "uvicorn running" with no DNS / connection errors
 - From your laptop: `nc -zv <old-public-pg-host> 5432` should fail with *Name or service not known*
 
