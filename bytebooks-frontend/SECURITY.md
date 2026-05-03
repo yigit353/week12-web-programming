@@ -9,7 +9,7 @@ Configured at `bytebooks-frontend/vercel.json` and applied to `/(.*)`:
 
 | Header | Value (current) | Why |
 | --- | --- | --- |
-| `Content-Security-Policy-Report-Only` | `default-src 'self'; script-src 'self'; connect-src 'self' https://week11-web-programming-production.up.railway.app; img-src 'self' data:; style-src 'self' 'unsafe-inline'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'` | XSS allowlist. Report-Only first so violations are observed, not blocked. Promote to enforcing once DevTools shows zero violations. |
+| `Content-Security-Policy-Report-Only` | `default-src 'self'; script-src 'self'; connect-src 'self' https://week12-web-programming-production.up.railway.app; img-src 'self' data:; style-src 'self' 'unsafe-inline'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'` | XSS allowlist. Report-Only first so violations are observed, not blocked. Promote to enforcing once DevTools shows zero violations. |
 | `Strict-Transport-Security` | `max-age=63072000; includeSubDomains; preload` | Force HTTPS for 2 years; prepare for HSTS preload-list submission. |
 | `X-Frame-Options` | `DENY` | Clickjack defense (legacy header, paired with CSP `frame-ancestors 'none'`). |
 | `X-Content-Type-Options` | `nosniff` | Disable MIME-sniffing. |
