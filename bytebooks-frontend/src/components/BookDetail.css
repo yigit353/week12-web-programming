@@ -1,0 +1,193 @@
+/* ── Fade-in animation ────────────────────────────────────────────────────── */
+
+/*
+ * The keyframe starts with the overlay invisible and the card very slightly
+ * shrunk. By the end of the animation both are at their natural state.
+ * Animating scale on the card (rather than the overlay) keeps the dark
+ * background at full opacity immediately — so the page content "recedes"
+ * at once while the card itself pops into view.
+ */
+@keyframes overlay-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes card-pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.93);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* ── Overlay ──────────────────────────────────────────────────────────────── */
+
+.book-detail-overlay {
+  /* Cover the entire viewport on top of all other content */
+  position: fixed;
+  inset: 0; /* shorthand for top/right/bottom/left: 0 */
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+
+  /* Centre the card both horizontally and vertically */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  animation: overlay-fade-in 0.2s ease forwards;
+
+  /* Prevent page content behind the overlay from scrolling while modal is open */
+  overflow: hidden;
+}
+
+/* ── Modal card ───────────────────────────────────────────────────────────── */
+
+.book-detail-card {
+  background-color: #ffffff;
+  border-radius: 12px;
+  padding: 2rem;
+  max-width: 500px;
+  width: 90%;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+
+  /* Limit card height on small screens and allow internal scrolling */
+  max-height: 90vh;
+  overflow-y: auto;
+
+  animation: card-pop-in 0.22s ease forwards;
+}
+
+/* ── Title ────────────────────────────────────────────────────────────────── */
+
+.detail-title {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0 0 0.35rem 0;
+  line-height: 1.25;
+}
+
+/* ── Author ───────────────────────────────────────────────────────────────── */
+
+.detail-author {
+  font-size: 1rem;
+  color: #64748b;
+  margin: 0 0 1.5rem 0;
+}
+
+/* ── Info rows ────────────────────────────────────────────────────────────── */
+
+.detail-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  margin-bottom: 1.75rem;
+}
+
+.detail-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.detail-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.detail-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #94a3b8;
+  width: 4.5rem;
+  flex-shrink: 0;
+}
+
+.detail-value {
+  font-size: 0.95rem;
+  color: #1e293b;
+}
+
+/* ── Price ────────────────────────────────────────────────────────────────── */
+
+.detail-price {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #2563eb; /* primary */
+}
+
+/* ── ISBN ─────────────────────────────────────────────────────────────────── */
+
+.detail-isbn {
+  font-family: "Courier New", Courier, monospace;
+  font-size: 0.9rem;
+  color: #475569;
+}
+
+/* ── Stock ────────────────────────────────────────────────────────────────── */
+
+.detail-out-of-stock {
+  color: #dc2626;
+  font-weight: 600;
+}
+
+/* ── Genre badge (mirrors BookCard style) ─────────────────────────────────── */
+
+.detail-genre-badge {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px; /* pill shape */
+  background-color: #e0e7ff;
+  color: #3730a3;
+  letter-spacing: 0.02em;
+}
+
+/* ── Close button ─────────────────────────────────────────────────────────── */
+
+.detail-close-btn {
+  display: block;
+  width: 100%;
+  padding: 0.7rem 1.5rem;
+  background-color: #2563eb; /* primary */
+  color: #ffffff;
+  font-size: 1rem;
+  font-weight: 600;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.15s ease, transform 0.1s ease;
+}
+
+.detail-close-btn:hover {
+  background-color: #1d4ed8; /* primary darker */
+}
+
+.detail-close-btn:active {
+  transform: scale(0.98);
+}
+
+/* ── Responsive ───────────────────────────────────────────────────────────── */
+
+@media (max-width: 480px) {
+  .book-detail-card {
+    max-width: 95%;
+    padding: 1.5rem;
+  }
+
+  .detail-title {
+    font-size: 1.35rem;
+  }
+}
