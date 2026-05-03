@@ -54,8 +54,13 @@ Expected status codes:
 import os
 from contextlib import asynccontextmanager
 
-from fastapi import Depends, FastAPI, HTTPException, Path, Query, Response
+from fastapi import Depends, FastAPI, HTTPException, Path, Query, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from jose import jwt as jose_jwt
+from slowapi import Limiter
+from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
 from sqlmodel import Session, select
 
 from auth_utils import create_access_token
@@ -139,6 +144,44 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# ---------------------------------------------------------------------------
+# Rate Limiting (slowapi) — Session 2
+# ---------------------------------------------------------------------------
+# Behind Vercel's edge, request.client.host is a Vercel POP IP, not the user.
+# Keying on the JWT 'sub' claim limits per-user instead of per-edge for
+# authenticated requests; unauthenticated requests fall back to client IP.
+# We extract 'sub' WITHOUT signature verification — the dependency layer
+# (get_current_user) handles real auth elsewhere; here we just need a key.
+def jwt_or_ip_key(request: Request) -> str:
+    """Rate-limit key: JWT subject if authenticated, else client IP."""
+    auth = request.headers.get("Authorization", "")
+    if auth.startswith("Bearer "):
+        token = auth[7:]
+        try:
+            payload = jose_jwt.get_unverified_claims(token)
+            sub = payload.get("sub")
+            if sub:
+                return f"user:{sub}"
+        except Exception:
+            pass
+    return f"ip:{get_remote_address(request)}"
+
+
+limiter = Limiter(key_func=jwt_or_ip_key)
+app.state.limiter = limiter
+
+
+@app.exception_handler(RateLimitExceeded)
+async def rate_limit_exceeded_handler(
+    request: Request, exc: RateLimitExceeded
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=429,
+        content={"detail": "rate limited"},
+        headers={"Retry-After": "60"},
+    )
 
 
 def _seed_data() -> None:
@@ -289,7 +332,9 @@ def list_books(session: Session = Depends(get_session)) -> list[Book]:
 
 
 @app.get("/books/search-external", response_model=list[ExternalBookResult], tags=["Books - External"])
+@limiter.limit("30/minute")
 async def search_external_books(
+    request: Request,
     q: str = Query(..., min_length=1, description="Search query for Open Library"),
 ):
     """Search Open Library for books matching a query string.
@@ -522,7 +567,9 @@ def register_user(
 
 
 @app.post("/auth/login", response_model=Token, tags=["Auth"])
+@limiter.limit("5/minute")
 def login_user(
+    request: Request,
     payload: UserLogin,
     session: Session = Depends(get_session),
 ) -> dict:
